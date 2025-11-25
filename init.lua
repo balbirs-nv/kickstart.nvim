@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -272,7 +272,7 @@ require('lazy').setup({
         end,
         desc = 'git grep',
       },
-      { '<leader>gv', ':Gvdiffsplit ', desc = 'git diff split' },
+      { '<leader>Gv', ':Gvdiffsplit ', desc = 'git diff split' },
     },
   },
 
@@ -691,6 +691,10 @@ require('lazy').setup({
       --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      -- Fix position_encoding capability issue
+      capabilities.general = capabilities.general or {}
+      capabilities.general.positionEncodings = { 'utf-8' }
+
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -710,11 +714,53 @@ require('lazy').setup({
             '--function-arg-placeholders',
             '--fallback-style=llvm',
             '--header-insertion=never',
+            '--malloc-trim',
           },
         },
         gopls = {},
         pyright = {},
-        rust_analyzer = {},
+        rust_analyzer = {
+          settings = {
+            ['rust-analyzer'] = {
+              -- Reduce memory usage
+              cargo = {
+                allFeatures = false, -- Don't enable all features (saves memory)
+                buildScripts = {
+                  enable = false, -- Disable build scripts (saves memory & faster)
+                },
+              },
+              checkOnSave = {
+                enable = true,
+                command = 'clippy',
+                allTargets = false, -- Only check main target (saves significant memory)
+              },
+              procMacro = {
+                enable = true,
+                ignored = {
+                  ['async-trait'] = { 'async_trait' },
+                  ['napi-derive'] = { 'napi' },
+                  ['async-recursion'] = { 'async_recursion' },
+                },
+              },
+              diagnostics = {
+                enable = true,
+                disabled = { 'unresolved-proc-macro' }, -- Reduce noise
+              },
+              -- Limit parallel jobs (reduces memory spikes)
+              numThreads = 4, -- Adjust based on your CPU (lower = less memory)
+
+              -- Disable heavy features
+              lens = {
+                enable = false, -- Disable inlay hints/code lens (saves memory)
+              },
+              completion = {
+                callable = {
+                  snippets = 'none', -- Simpler completions
+                },
+              },
+            },
+          },
+        },
 
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -778,7 +824,6 @@ require('lazy').setup({
       }
     end,
   },
-
   { -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
@@ -940,6 +985,7 @@ require('lazy').setup({
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
       -- vim.cmd.colorscheme 'tokyonight-night'
       vim.cmd.colorscheme 'desert'
+      -- vim.cmd.colorscheme 'tokyonight-day'
 
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
