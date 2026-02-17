@@ -269,23 +269,17 @@ require('lazy').setup({
     keys = {
       {
         '<leader>gs',
-        function()
-          vim.cmd 'vert Git'
-        end,
+        function() vim.cmd 'vert Git' end,
         desc = 'git fugitive',
       },
       {
         '<leader>gG',
-        function()
-          vim.cmd 'vert Git grep <cexpr>'
-        end,
+        function() vim.cmd 'vert Git grep <cexpr>' end,
         desc = 'vert git grep',
       },
       {
         '<leader>gg',
-        function()
-          vim.cmd 'Git grep <cexpr>'
-        end,
+        function() vim.cmd 'Git grep <cexpr>' end,
         desc = 'git grep',
       },
       { '<leader>Gv', ':Gvdiffsplit ', desc = 'git diff split' },
@@ -641,6 +635,7 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       local servers = {
         clangd = {
+          filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'cuda', 'proto' },
           cmd = {
             'clangd',
             '--background-index',
@@ -652,8 +647,8 @@ require('lazy').setup({
             '--malloc-trim',
           },
         },
-        gopls = {},
-        pyright = {},
+        gopls = { filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' } },
+        pyright = { filetypes = { 'python' } },
         rust_analyzer = {
           settings = {
             ['rust-analyzer'] = {
@@ -713,9 +708,9 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
+      local ensure_installed = vim.tbl_map(function(name) return string.gsub(name, '_', '-') end, vim.tbl_keys(servers or {}))
       vim.list_extend(ensure_installed, {
-        'lua_ls', -- Lua Language server
+        'lua-language-server', -- Lua Language server
         'stylua', -- Used to format Lua code
         -- You can add other tools here that you want Mason to install
       })
@@ -729,7 +724,7 @@ require('lazy').setup({
       end
 
       -- Special Lua Config, as recommended by neovim help docs
-      vim.lsp.config('lua_ls', {
+      vim.lsp.config('lua-language-server', {
         on_init = function(client)
           if client.workspace_folders then
             local path = client.workspace_folders[1].name
@@ -753,7 +748,7 @@ require('lazy').setup({
           Lua = {},
         },
       })
-      vim.lsp.enable 'lua_ls'
+      vim.lsp.enable 'lua-language-server'
     end,
   },
   { -- Autoformat
@@ -957,13 +952,26 @@ require('lazy').setup({
 
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
     config = function()
       local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      require('nvim-treesitter').install(filetypes)
-      vim.api.nvim_create_autocmd('FileType', {
-        pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
-      })
+      local ok, configs = pcall(require, 'nvim-treesitter.configs')
+      if ok then
+        -- Legacy nvim-treesitter (master branch)
+        configs.setup {
+          ensure_installed = filetypes,
+          auto_install = false,
+          highlight = { enable = true },
+          indent = { enable = true },
+        }
+      else
+        -- New nvim-treesitter (main branch)
+        require('nvim-treesitter').install(filetypes)
+        vim.api.nvim_create_autocmd('FileType', {
+          pattern = filetypes,
+          callback = function() vim.treesitter.start() end,
+        })
+      end
     end,
   },
   {
