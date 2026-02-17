@@ -196,6 +196,10 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+-- vim.keymap.set('n', '<leader>gd', function()
+--   vim.diagnostic.enable(not vim.diagnostic.is_enabled())
+-- end, { silent = true, noremap = true })
+vim.diagnostic.config { virtual_text = true }
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -256,8 +260,44 @@ rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added via a link or github org/name. To run setup automatically, use `opts = {}`
-  { 'NMAC427/guess-indent.nvim', opts = {} },
+  -- { 'NMAC427/guess-indent.nvim', opts = {} },
+  -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
+  'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+  {
+    'tpope/vim-fugitive',
+    lazy = false,
+    keys = {
+      {
+        '<leader>gs',
+        function()
+          vim.cmd 'vert Git'
+        end,
+        desc = 'git fugitive',
+      },
+      {
+        '<leader>gG',
+        function()
+          vim.cmd 'vert Git grep <cexpr>'
+        end,
+        desc = 'vert git grep',
+      },
+      {
+        '<leader>gg',
+        function()
+          vim.cmd 'Git grep <cexpr>'
+        end,
+        desc = 'git grep',
+      },
+      { '<leader>gv', ':Gvdiffsplit ', desc = 'git diff split' },
+    },
+  },
 
+  -- NOTE: Plugins can also be added by using a table,
+  -- with the first argument being the link and the following
+  -- keys can be used to configure plugin behavior/loading/etc.
+  --
+  -- Use `opts = {}` to automatically pass options to a plugin's `setup()` function, forcing the plugin to be loaded.
+  --
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
   --    {
@@ -391,6 +431,9 @@ require('lazy').setup({
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
       }
+
+      -- Balbir's changes
+      require('telescope').load_extension 'git_grep'
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
@@ -593,10 +636,22 @@ require('lazy').setup({
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --  See `:help lsp-config` for information about keys and how to configure
       local servers = {
-        -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
-        -- rust_analyzer = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--background-index',
+            '--clang-tidy',
+            '--completion-style=detailed',
+            '--function-arg-placeholders',
+            '--fallback-style=llvm',
+            '--header-insertion=never',
+          },
+        },
+        gopls = {},
+        pyright = {},
+        rust_analyzer = {},
+
+        -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
         --    https://github.com/pmizio/typescript-tools.nvim
@@ -674,7 +729,8 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
+        local disable_filetypes = { c = true, cpp = true, cuda = true }
+        local lsp_format_opt
         if disable_filetypes[vim.bo[bufnr].filetype] then
           return nil
         else
@@ -806,7 +862,11 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- vim.cmd.colorscheme 'tokyonight-night'
+      vim.cmd.colorscheme 'desert'
+
+      -- You can configure highlights by doing something like:
+      vim.cmd.hi 'Comment gui=none'
     end,
   },
 
@@ -860,6 +920,37 @@ require('lazy').setup({
       })
     end,
   },
+  {
+    'davvid/telescope-git-grep.nvim',
+  },
+  {
+    'stevearc/aerial.nvim',
+    opts = {},
+    -- Optional dependencies
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-tree/nvim-web-devicons',
+    },
+    config = function()
+      require('aerial').setup {
+        -- optionally use on_attach to set keymaps when aerial has attached to a buffer
+        on_attach = function(bufnr)
+          -- Jump forwards/backwards with '{' and '}'
+          vim.keymap.set('n', '{', '<cmd>AerialPrev<CR>', { buffer = bufnr })
+          vim.keymap.set('n', '}', '<cmd>AerialNext<CR>', { buffer = bufnr })
+        end,
+      }
+      -- You probably also want to set a keymap to toggle aerial
+      vim.keymap.set('n', '<leader>a', '<cmd>AerialToggle!<CR>')
+    end,
+  },
+  -- {
+  --   'mrcjkb/rustaceanvim',
+  --   version = '^5', -- Recommended
+  --   lazy = false, -- This plugin is already lazy
+
+  --   config = function(self, opts) end,
+  -- },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
