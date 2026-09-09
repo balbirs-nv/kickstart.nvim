@@ -147,7 +147,7 @@ vim.o.splitbelow = true
 --  It is very similar to `vim.o` but offers an interface for conveniently interacting with tables.
 --   See `:help lua-options`
 --   and `:help lua-guide-options`
-vim.o.list = true
+vim.o.list = false
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
@@ -637,14 +637,24 @@ require('lazy').setup({
         clangd = {
           filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'cuda', 'proto' },
           cmd = {
+            'env',
+            -- clangd allocates from several worker threads. Limiting glibc's
+            -- arenas keeps freed memory reusable and makes malloc_trim more
+            -- effective on large compilation databases.
+            'MALLOC_ARENA_MAX=2',
+            'MALLOC_TRIM_THRESHOLD_=131072',
             'clangd',
+            -- Background indexing scales memory use with this worker count.
+            '-j=4',
             '--background-index',
+            '--background-index-priority=background',
             '--clang-tidy',
             '--completion-style=detailed',
-            '--function-arg-placeholders',
+            '--function-arg-placeholders=true',
             '--fallback-style=llvm',
             '--header-insertion=never',
             '--malloc-trim',
+            '--pch-storage=disk',
           },
         },
         gopls = { filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' } },
